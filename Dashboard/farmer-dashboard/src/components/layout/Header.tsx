@@ -2,21 +2,23 @@
 
 import { FC } from 'react';
 import { Bell, Search, User } from 'lucide-react';
-import FarmerProfileSidebar from '../FarmerProfileSidebar';
-
-interface User {
-  name: string;
-  email: string;
-  farmName?: string;
-  location?: string;
-}
+import { useAuth } from '@/context/AuthContext';
 
 interface HeaderProps {
-  user: User;
-  onProfileOpen: (isOpen: boolean) => void;
+  onProfileOpen: () => void;
 }
 
-const Header: FC<HeaderProps> = ({ user, onProfileOpen }) => {
+const Header: FC<HeaderProps> = ({ onProfileOpen }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || user.role !== 'farmer') {
+    return null;
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="flex h-16 items-center justify-between px-6">
@@ -34,21 +36,21 @@ const Header: FC<HeaderProps> = ({ user, onProfileOpen }) => {
         <div className="flex items-center space-x-4">
           <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <Bell className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500"></span>
+            <span className="absolute right-1 top-1 h-2 w-2 bg-red-500 rounded-full"></span>
           </button>
           
           <div className="h-6 w-px bg-gray-200"></div>
           
           <button
-            onClick={() => onProfileOpen(true)}
+            onClick={onProfileOpen}
             className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
               <User className="h-4 w-4 text-white" />
             </div>
             <div className="flex flex-col items-start">
               <span className="text-sm font-medium">{user.name}</span>
-              <span className="text-xs text-gray-500">Farmer</span>
+              <span className="text-xs text-gray-500">{user.farmName || 'Farmer'}</span>
             </div>
           </button>
         </div>

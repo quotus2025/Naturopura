@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource/geist-mono"; /* defaults to weight 400 */
+
 
 :root {
   --background: #ffffff;

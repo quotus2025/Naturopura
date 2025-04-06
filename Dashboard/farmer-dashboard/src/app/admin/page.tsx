@@ -1,173 +1,186 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Farmer from '@/models/Farmer';
-import Admin from '@/models/Admin';
+import { FC, useEffect, useState } from 'react';
+import AdminLayout from '@/components/layout/AdminLayout';
+import { Farmer } from '@/models/Farmer';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Eye, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 
-export default function AdminDashboard() {
-  const [farmers, setFarmers] = useState([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const router = useRouter();
+interface FarmerWithLoans extends Farmer {
+  loans?: {
+    id: string;
+    amount: number;
+    status: 'pending' | 'approved' | 'rejected';
+  }[];
+}
+
+const AdminDashboard: FC = () => {
+  const [farmers, setFarmers] = useState<FarmerWithLoans[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
+    fetchFarmers();
   }, []);
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/admin/check-auth');
-      if (response.ok) {
-        setIsAuthenticated(true);
-        fetchFarmers();
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(true);
-        fetchFarmers();
-      } else {
-        alert('Invalid credentials');
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
 
   const fetchFarmers = async () => {
     try {
       const response = await fetch('/api/admin/farmers');
-      if (response.ok) {
-        const data = await response.json();
-        setFarmers(data);
-      }
+      const data = await response.json();
+      setFarmers(data);
     } catch (error) {
-      console.error('Failed to fetch farmers:', error);
+      console.error('Error fetching farmers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveLoan = async (farmerId: string, loanId: string) => {
+    try {
+      await fetch(`/api/admin/loans/${loanId}/approve`, {
+        method: 'POST',
+      });
+      fetchFarmers(); // Refresh the list
+    } catch (error) {
+      console.error('Error approving loan:', error);
+    }
+  };
+
+  const handleRejectLoan = async (farmerId: string, loanId: string) => {
+    try {
+      await fetch(`/api/admin/loans/${loanId}/reject`, {
+        method: 'POST',
+      });
+      fetchFarmers(); // Refresh the list
+    } catch (error) {
+      console.error('Error rejecting loan:', error);
     }
   };
 
   const handleDeleteFarmer = async (farmerId: string) => {
     if (window.confirm('Are you sure you want to delete this farmer?')) {
       try {
-        const response = await fetch(`/api/admin/farmers/${farmerId}`, {
+        await fetch(`/api/admin/farmers/${farmerId}`, {
           method: 'DELETE',
         });
-
-        if (response.ok) {
-          fetchFarmers();
-        } else {
-          alert('Failed to delete farmer');
-        }
+        fetchFarmers(); // Refresh the list
       } catch (error) {
-        console.error('Delete failed:', error);
+        console.error('Error deleting farmer:', error);
       }
     }
   };
 
-  if (!isAuthenticated) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md w-96">
-          <h2 className="text-2xl font-bold mb-6 text-center">Admin Login</h2>
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
-            >
-              Login
-            </button>
-          </form>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Farm Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {farmers.map((farmer: any) => (
-                <tr key={farmer._id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{farmer.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{farmer.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{farmer.farmName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{farmer.location}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleDeleteFarmer(farmer._id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+    <AdminLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Farmer Management</h1>
+          <div className="flex space-x-4">
+            <Button variant="outline" onClick={fetchFarmers}>
+              Refresh
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Farm Name</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Loans</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {farmers.map((farmer) => (
+                <TableRow key={farmer._id}>
+                  <TableCell>{farmer.name}</TableCell>
+                  <TableCell>{farmer.email}</TableCell>
+                  <TableCell>{farmer.farmName}</TableCell>
+                  <TableCell>{farmer.location}</TableCell>
+                  <TableCell>
+                    {farmer.loans?.map((loan) => (
+                      <div key={loan.id} className="flex items-center space-x-2">
+                        <span>₹{loan.amount}</span>
+                        <Badge
+                          variant={
+                            loan.status === 'approved'
+                              ? 'success'
+                              : loan.status === 'rejected'
+                              ? 'destructive'
+                              : 'default'
+                          }
+                        >
+                          {loan.status}
+                        </Badge>
+                        {loan.status === 'pending' && (
+                          <div className="flex space-x-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleApproveLoan(farmer._id, loan.id)}
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRejectLoan(farmer._id, loan.id)}
+                            >
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => window.location.href = `/admin/farmers/${farmer._id}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteFarmer(farmer._id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
-} 
+};
+
+export default AdminDashboard; 

@@ -1,23 +1,59 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
 
 export function middleware(request: NextRequest) {
-  // Get token from cookie
-  const token = request.cookies.get('token')?.value;
-
-  // Check if the request is for the login or register page
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
-                    request.nextUrl.pathname.startsWith('/register');
-
-  // If trying to access auth pages while logged in, redirect to dashboard
-  if (isAuthPage && token) {
-    return NextResponse.redirect(new URL('/', request.url));
+  const { pathname } = request.nextUrl;
+  
+  // Handle logout route
+  if (pathname === '/logout') {
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    
+    // Clear all cookies
+    response.cookies.delete('token');
+    response.cookies.delete('adminSession');
+    
+    // Clear cookies with different paths
+    response.cookies.delete('token', { path: '/' });
+    response.cookies.delete('adminSession', { path: '/' });
+    response.cookies.delete('token', { path: '/admin' });
+    response.cookies.delete('adminSession', { path: '/admin' });
+    
+    return response;
   }
 
-  // If trying to access protected pages while logged out, redirect to login
-  if (!isAuthPage && !token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Check for admin session
+  const adminSession = request.cookies.get('adminSession');
+  // Check for farmer session
+  const farmerSession = request.cookies.get('token');
+
+  // Public paths that don't require authentication
+  const publicPaths = ['/login', '/register'];
+  
+  // If user is on a public path and has a valid session, redirect to appropriate dashboard
+  if (publicPaths.includes(pathname)) {
+    if (adminSession) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+    if (farmerSession) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Handle admin routes
+  if (pathname.startsWith('/admin')) {
+    if (!adminSession) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Handle protected farmer routes
+  if (!publicPaths.includes(pathname) && !pathname.startsWith('/admin')) {
+    if (!farmerSession) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();

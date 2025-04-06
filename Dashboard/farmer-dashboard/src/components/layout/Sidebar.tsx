@@ -4,6 +4,7 @@ import { FC, useState, ReactElement } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { logout } from '@/utils/auth';
 import {
   LayoutDashboard,
   Wallet,
@@ -91,9 +92,7 @@ const Sidebar: FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   };
 
   const handleLogout = () => {
-    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    logout();
   };
 
   return (

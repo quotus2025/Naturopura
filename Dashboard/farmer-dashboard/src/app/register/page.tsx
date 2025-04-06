@@ -11,12 +11,19 @@ export default function RegisterPage() {
     name: '',
     email: '',
     password: '',
+    farmName: '',
+    location: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
+      console.log('Registration attempt with:', formData.email);
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -25,15 +32,21 @@ export default function RegisterPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to register');
       }
 
+      const data = await response.json();
+      console.log('Registration successful:', data);
+
+      // Redirect to login page
       router.push('/login');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,13 +123,46 @@ export default function RegisterPage() {
                   }
                 />
               </div>
+
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 h-5 w-5" />
+                <input
+                  id="farmName"
+                  name="farmName"
+                  type="text"
+                  required
+                  className="pl-10 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors text-white placeholder-gray-300"
+                  placeholder="Farm Name"
+                  value={formData.farmName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, farmName: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 h-5 w-5" />
+                <input
+                  id="location"
+                  name="location"
+                  type="text"
+                  required
+                  className="pl-10 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors text-white placeholder-gray-300"
+                  placeholder="Location"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                />
+              </div>
             </div>
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full py-3 px-4 text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-transparent transform transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
             >
-              Create Account
+              {loading ? 'Registering...' : 'Create Account'}
             </button>
           </form>
 

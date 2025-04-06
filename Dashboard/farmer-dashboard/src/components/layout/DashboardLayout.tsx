@@ -1,46 +1,49 @@
 'use client';
 
-import { FC, ReactNode, useEffect, useState } from 'react';
+import { FC, ReactNode, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import FarmerProfileSidebar from '../FarmerProfileSidebar';
-
-interface User {
-  name: string;
-  email: string;
-  farmName?: string;
-  location?: string;
-}
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
+const DashboardContent: FC<DashboardLayoutProps> = ({ children }) => {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Get user data from localStorage (set during login)
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
+    if (!loading && (!user || user.role !== 'farmer')) {
+      router.push('/login');
     }
-  }, []);
+  }, [user, loading, router]);
 
-  if (!user) {
-    return null; // Or a loading state
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || user.role !== 'farmer') {
+    return null;
   }
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+      <Sidebar 
+        isCollapsed={isSidebarCollapsed} 
+        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+      />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header user={user} onProfileOpen={setIsProfileOpen} />
+        <Header 
+          onProfileOpen={() => setIsProfileOpen(true)} 
+        />
         
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
@@ -48,9 +51,16 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
       <FarmerProfileSidebar
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        user={user}
       />
     </div>
+  );
+};
+
+const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
+  return (
+    <AuthProvider>
+      <DashboardContent>{children}</DashboardContent>
+    </AuthProvider>
   );
 };
 

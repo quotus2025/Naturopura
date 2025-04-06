@@ -10,40 +10,36 @@ import {
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/utils/auth';
-import { useAuth } from '@/context/AuthContext';
 
-interface FarmerProfileSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+// First, add User interface
+interface User {
+  name: string;
+  email: string;
+  role?: string;
 }
 
-const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }) => {
-  const { user, loading } = useAuth();
+// Update the props interface
+interface AdminProfileSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User; // Add user prop
+}
+
+// Update the component definition
+const AdminProfileSidebar: FC<AdminProfileSidebarProps> = ({ isOpen, onClose, user }) => {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Order Received', message: 'You have a new order for 5kg of organic rice', time: '2m ago', read: false },
-    { id: 2, title: 'Payment Received', message: 'Payment of ₹2,500 received for order #1234', time: '1h ago', read: true },
-    { id: 3, title: 'Weather Alert', message: 'Heavy rain expected tomorrow. Plan your harvest accordingly.', time: '3h ago', read: false },
+    { id: 1, title: 'New Farmer Registration', message: 'A new farmer has registered on the platform', time: '2m ago', read: false },
+    { id: 2, title: 'Loan Application', message: 'New loan application received from Farmer #1234', time: '1h ago', read: true },
+    { id: 3, title: 'System Update', message: 'System maintenance scheduled for tomorrow', time: '3h ago', read: false },
   ]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) {
-    return null;
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  const handleLogout = () => {
+    logout();
+    router.push('/admin/login');
   };
 
   return (
@@ -64,7 +60,7 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
       >
         {/* Header with gradient background */}
         <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <h2 className="text-xl font-semibold">Farmer Profile</h2>
+          <h2 className="text-xl font-semibold">Admin Profile</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-white/10 rounded-full transition-colors"
@@ -78,7 +74,7 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
           {/* Profile Section with enhanced styling */}
           <div className="text-center bg-white rounded-xl p-6 shadow-sm">
             <div className="relative w-28 h-28 mx-auto mb-4">
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center ring-4 ring-green-100">
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center ring-4 ring-blue-100">
                 <span className="text-4xl font-bold text-white">
                   {user.name.charAt(0).toUpperCase()}
                 </span>
@@ -89,14 +85,8 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
             </div>
             <h3 className="text-2xl font-semibold text-gray-800">{user.name}</h3>
             <p className="text-gray-500">{user.email}</p>
-            {user.farmName && (
-              <p className="text-gray-600 mt-2 font-medium">{user.farmName}</p>
-            )}
-            {user.location && (
-              <p className="text-gray-500 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                {user.location}
-              </p>
+            {user.role && (
+              <p className="text-gray-600 mt-2 font-medium">{user.role}</p>
             )}
           </div>
 
@@ -108,8 +98,8 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
                   <Activity className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Active Orders</p>
-                  <p className="text-xl font-semibold text-gray-800">12</p>
+                  <p className="text-sm text-gray-500">Active Farmers</p>
+                  <p className="text-xl font-semibold text-gray-800">24</p>
                 </div>
               </div>
             </div>
@@ -119,8 +109,8 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
                   <Award className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Total Sales</p>
-                  <p className="text-xl font-semibold text-gray-800">₹45,000</p>
+                  <p className="text-sm text-gray-500">Pending Loans</p>
+                  <p className="text-xl font-semibold text-gray-800">5</p>
                 </div>
               </div>
             </div>
@@ -169,12 +159,12 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
               </button>
               <button 
                 className={`w-full flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-xl transition-all ${
-                  activeSection === 'payments' ? 'bg-blue-50 text-blue-600' : ''
+                  activeSection === 'system' ? 'bg-blue-50 text-blue-600' : ''
                 }`}
-                onClick={() => setActiveSection('payments')}
+                onClick={() => setActiveSection('system')}
               >
-                <CreditCard className="w-5 h-5 mr-3" />
-                Payment Methods
+                <Settings className="w-5 h-5 mr-3" />
+                System Settings
                 <ChevronRight className="w-5 h-5 ml-auto" />
               </button>
               <button 
@@ -241,4 +231,4 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
   );
 };
 
-export default FarmerProfileSidebar;
+export default AdminProfileSidebar;

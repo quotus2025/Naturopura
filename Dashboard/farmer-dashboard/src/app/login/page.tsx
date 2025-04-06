@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, Mail } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,9 +12,14 @@ export default function LoginPage() {
     password: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -30,11 +35,21 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      document.cookie = `token=${data.token}; path=/`;
-      localStorage.setItem('user', JSON.stringify(data.farmer));
-      router.push('/');
-    } catch (err: any) {
-      setError(err.message);
+      // Store user data in localStorage
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      // Redirect based on role
+      if (data.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -52,7 +67,7 @@ export default function LoginPage() {
               Welcome Back
             </h2>
             <p className="text-center text-gray-200">
-              Sign in to access your account
+              Sign in to continue your journey
             </p>
           </div>
 
@@ -85,7 +100,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   className="pl-10 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-colors text-white placeholder-gray-300"
                   placeholder="Password"
@@ -94,14 +109,26 @@ export default function LoginPage() {
                     setFormData({ ...formData, password: e.target.value })
                   }
                 />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-white transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full py-3 px-4 text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-transparent transform transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
             >
-              Sign in
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
 
@@ -110,7 +137,7 @@ export default function LoginPage() {
               href="/register"
               className="text-gray-200 hover:text-white font-medium transition-colors"
             >
-              Don't have an account? <span className="underline">Register</span>
+              Don't have an account? <span className="underline">Sign up</span>
             </Link>
           </div>
         </div>

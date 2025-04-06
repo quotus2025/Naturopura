@@ -30,18 +30,20 @@ export async function POST(request: Request) {
       password: hashedPassword,
       farmName,
       location,
+      role: 'farmer', // Set default role as farmer
     });
 
-    return NextResponse.json(
-      { message: 'Farmer registered successfully', farmer: { 
+    return NextResponse.json({
+      message: 'Farmer registered successfully',
+      farmer: {
         id: farmer._id,
         name: farmer.name,
         email: farmer.email,
         farmName: farmer.farmName,
-        location: farmer.location
-      }},
-      { status: 201 }
-    );
+        location: farmer.location,
+        role: farmer.role,
+      },
+    });
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
