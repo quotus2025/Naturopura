@@ -10,6 +10,7 @@ import {
   Settings,
   Menu,
   X,
+  CreditCard,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -30,8 +31,8 @@ const menuItems: MenuItem[] = [
     href: '/admin/farmers',
   },
   {
-    title: 'Loans',
-    icon: <FileText className="h-5 w-5" />,
+    title: 'Loan Management',
+    icon: <CreditCard className="h-5 w-5" />,
     href: '/admin/loans',
   },
   {
@@ -90,4 +91,4 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ isCollapsed, onToggle }) => {
   );
 };
 
-export default AdminSidebar; 
+export default AdminSidebar;

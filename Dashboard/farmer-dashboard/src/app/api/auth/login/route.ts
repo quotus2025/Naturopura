@@ -13,50 +13,14 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
     
-    // First check if it's an admin login
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      const token = jwt.sign(
-        { 
-          email: ADMIN_EMAIL, 
-          name: 'Administrator',
-          role: 'admin' 
-        },
-        JWT_SECRET,
-        { expiresIn: '1d' }
-      );
-
-      const response = NextResponse.json(
-        { 
-          message: 'Admin login successful', 
-          role: 'admin',
-          user: {
-            name: 'Administrator',
-            email: ADMIN_EMAIL,
-            role: 'admin'
-          }
-        },
-        { status: 200 }
-      );
-
-      response.cookies.set('adminSession', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60 * 24,
-        path: '/',
-      });
-
-      return response;
-    }
-
     // Connect to MongoDB
     if (!mongoose.connections[0].readyState) {
       await mongoose.connect(process.env.MONGODB_URI || '');
     }
     
-    // Find farmer by email
-    const farmer = await Farmer.findOne({ email });
-    if (!farmer) {
+    // Find user by email
+    const user = await Farmer.findOne({ email });
+    if (!user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -64,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, farmer.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -72,13 +36,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create farmer token
+    // Check if this is the admin user
+    const isAdmin = user.email === 'admin@naturopura.com';
+    
+    // Create token with proper role
     const token = jwt.sign(
       { 
-        userId: farmer._id, 
-        email: farmer.email, 
-        name: farmer.name,
-        role: 'farmer' 
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        role: isAdmin ? 'admin' : 'farmer',
+        farmName: user.farmName,
+        location: user.location
       },
       JWT_SECRET,
       { expiresIn: '1d' }
@@ -86,20 +55,22 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json(
       { 
-        message: 'Login successful', 
-        role: 'farmer', 
+        message: 'Login successful',
+        role: isAdmin ? 'admin' : 'farmer',
         user: { 
-          name: farmer.name, 
-          email: farmer.email, 
-          farmName: farmer.farmName, 
-          location: farmer.location,
-          role: 'farmer'
+          name: user.name,
+          email: user.email,
+          farmName: user.farmName,
+          location: user.location,
+          role: isAdmin ? 'admin' : 'farmer'
         } 
       },
       { status: 200 }
     );
 
-    response.cookies.set('token', token, {
+    // Set the appropriate cookie
+    const cookieName = isAdmin ? 'adminSession' : 'token';
+    response.cookies.set(cookieName, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

@@ -15,7 +15,7 @@ import { logout } from '@/utils/auth';
 interface User {
   name: string;
   email: string;
-  role?: string;
+  role: string;
 }
 
 // Update the props interface
@@ -85,9 +85,7 @@ const AdminProfileSidebar: FC<AdminProfileSidebarProps> = ({ isOpen, onClose, us
             </div>
             <h3 className="text-2xl font-semibold text-gray-800">{user.name}</h3>
             <p className="text-gray-500">{user.email}</p>
-            {user.role && (
-              <p className="text-gray-600 mt-2 font-medium">{user.role}</p>
-            )}
+            <p className="text-gray-600 mt-2">System Administrator</p>
           </div>
 
           {/* Quick Stats */}

@@ -8,9 +8,25 @@ const nextConfig: NextConfig = {
         hostname: 'quotus.com',
         pathname: '/wp-content/uploads/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'crop.kindwise.com',
+        pathname: '/api/**',
+      }
     ],
   },
-  /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb'
+    }
+  },
+  webpack: (config) => {
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
+    };
+    return config;
+  }
 };
 
 export default nextConfig;

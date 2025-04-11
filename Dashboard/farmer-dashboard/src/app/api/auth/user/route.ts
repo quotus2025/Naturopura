@@ -7,8 +7,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export async function GET() {
   try {
     const cookieStore = cookies();
-    const adminToken = cookieStore.get('adminSession');
-    const userToken = cookieStore.get('token');
+    const adminToken = await cookieStore.get('adminSession');
+    const userToken = await cookieStore.get('token');
 
     if (!adminToken && !userToken) {
       return NextResponse.json(
@@ -29,10 +29,10 @@ export async function GET() {
         location?: string;
       };
 
-      // Return user data based on role
       if (decoded.role === 'admin') {
         return NextResponse.json({
-          name: decoded.name,
+          id: decoded.userId || 'admin',
+          name: decoded.name || 'Administrator',
           email: decoded.email,
           role: decoded.role
         });
@@ -46,7 +46,6 @@ export async function GET() {
         farmName: decoded.farmName,
         location: decoded.location
       });
-
     } catch (error) {
       console.error('Token verification failed:', error);
       return NextResponse.json(

@@ -52,6 +52,7 @@ const DashboardContent: FC<DashboardLayoutProps> = ({ children }) => {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
       />
+     
     </div>
   );
 };
