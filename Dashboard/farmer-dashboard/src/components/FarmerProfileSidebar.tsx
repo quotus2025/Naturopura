@@ -7,7 +7,6 @@ import {
   Calendar, Activity, Award, 
   ChevronRight, Check, AlertCircle
 } from 'lucide-react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/utils/auth';
 import { useAuth } from '@/context/AuthContext';
@@ -80,15 +79,15 @@ const FarmerProfileSidebar: FC<FarmerProfileSidebarProps> = ({ isOpen, onClose }
             <div className="relative w-28 h-28 mx-auto mb-4">
               <div className="w-full h-full rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center ring-4 ring-green-100">
                 <span className="text-4xl font-bold text-white">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user.name ? user.name.charAt(0).toUpperCase() : ''}
                 </span>
               </div>
               <button className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-md hover:shadow-lg transition-shadow">
                 <User className="w-4 h-4 text-blue-600" />
               </button>
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800">{user.name}</h3>
-            <p className="text-gray-500">{user.email}</p>
+            <h3 className="text-2xl font-semibold text-gray-800">{user.name || 'Unknown'}</h3>
+            <p className="text-gray-500">{user.email || 'No email provided'}</p>
             {user.farmName && (
               <p className="text-gray-600 mt-2 font-medium">{user.farmName}</p>
             )}

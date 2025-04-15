@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb'
+    },
+    turbo: {
+      rules: {
+        api: {
+          loose: false,
+          loaders: []
+        }
+      }
     }
   },
   webpack: (config) => {

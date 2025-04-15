@@ -33,6 +33,7 @@ const LoanManagement = () => {
   const pendingLoans = loans.filter(loan => loan.status === 'pending');
   const approvedLoans = loans.filter(loan => loan.status === 'approved');
   const rejectedLoans = loans.filter(loan => loan.status === 'rejected');
+  const totalLoans = loans.length;
 
   useEffect(() => {
     fetchLoans();
@@ -125,6 +126,10 @@ const LoanManagement = () => {
             <div>
               <p className="text-sm text-gray-500">Total Amount</p>
               <p className="text-2xl font-bold">₹{totalAmount.toLocaleString()}</p>
+              <p className="text-xs text-blue-600 mt-1">
+                <TrendingUp className="h-3 w-3 inline mr-1" />
+                {totalLoans} Total Loans
+              </p>
             </div>
           </div>
         </div>

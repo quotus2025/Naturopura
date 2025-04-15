@@ -1,63 +1,48 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import connectDB from '@/lib/mongodb';
+import Farmer from '@/models/Farmer';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function GET() {
   try {
     const cookieStore = cookies();
-    const adminToken = await cookieStore.get('adminSession');
-    const userToken = await cookieStore.get('token');
+    const token = cookieStore.get('farmerSession');
 
-    if (!adminToken && !userToken) {
+    if (!token) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const token = adminToken || userToken;
+    const decoded = jwt.verify(token.value, JWT_SECRET) as {
+      _id: string;
+      email: string;
+    };
+
+    await connectDB();
     
-    try {
-      const decoded = jwt.verify(token!.value, JWT_SECRET) as {
-        userId?: string;
-        email: string;
-        name: string;
-        role: string;
-        farmName?: string;
-        location?: string;
-      };
+    const user = await Farmer.findById(decoded._id)
+      .select('_id name email farmName')
+      .lean();
 
-      if (decoded.role === 'admin') {
-        return NextResponse.json({
-          id: decoded.userId || 'admin',
-          name: decoded.name || 'Administrator',
-          email: decoded.email,
-          role: decoded.role
-        });
-      }
-
-      return NextResponse.json({
-        userId: decoded.userId,
-        name: decoded.name,
-        email: decoded.email,
-        role: decoded.role,
-        farmName: decoded.farmName,
-        location: decoded.location
-      });
-    } catch (error) {
-      console.error('Token verification failed:', error);
+    if (!user) {
       return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
+        { error: 'User not found' },
+        { status: 404 }
       );
     }
+
+    console.log('Auth check successful:', user);
+    return NextResponse.json(user);
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Auth check failed:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Authentication failed' },
+      { status: 401 }
     );
   }
 }

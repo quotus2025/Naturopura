@@ -28,13 +28,16 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+interface Loan {
+  _id: string;
+  userId: string;  // Reference to the farmer
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  applicationDate: string;
+}
+
 interface FarmerWithLoans extends Farmer {
-  loans?: {
-    id: string;
-    amount: number;
-    status: "pending" | "approved" | "rejected";
-    applicationDate: string;
-  }[];
+  loans?: Loan[];  // Updated to use the Loan interface
 }
 
 const AdminDashboard: FC = () => {
@@ -42,27 +45,16 @@ const AdminDashboard: FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [loans, setLoans] = useState<Loan[]>([]);
 
   // Calculate statistics
-  const totalLoans = farmers.reduce(
-    (acc, farmer) => acc + (farmer.loans?.length || 0),
-    0
-  );
+  const approvedLoansAmount = loans
+    .filter(loan => loan.status === 'approved')
+    .reduce((sum, loan) => sum + (loan.amount || 0), 0);
 
-  const approvedLoansAmount = farmers.reduce(
-    (acc, farmer) =>
-      acc +
-      (farmer.loans
-        ?.filter((l) => l.status === "approved")
-        .reduce((sum, loan) => sum + loan.amount, 0) || 0),
-    0
-  );
-
-  const pendingLoans = farmers.reduce(
-    (acc, farmer) =>
-      acc + (farmer.loans?.filter((l) => l.status === "pending").length || 0),
-    0
-  );
+  const pendingLoans = loans
+    .filter(loan => loan.status === 'pending')
+    .length;
 
   // Filter farmers based on search
   const filteredFarmers = farmers.filter(
@@ -74,41 +66,67 @@ const AdminDashboard: FC = () => {
 
   useEffect(() => {
     fetchFarmers();
+    fetchLoans();
   }, []);
+
+  const fetchLoans = async () => {
+    try {
+      const response = await fetch('/api/admin/loans');
+      const data = await response.json();
+      setLoans(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching loans:', error);
+      setLoans([]);
+    }
+  };
 
   const fetchFarmers = async () => {
     try {
-      const response = await fetch("/api/admin/farmers");
-      const data = await response.json();
-      setFarmers(data);
+      const [farmersResponse, loansResponse] = await Promise.all([
+        fetch("/api/admin/farmers"),
+        fetch('/api/admin/loans')
+      ]);
+
+      const farmersData = await farmersResponse.json();
+      const loansData = await loansResponse.json();
+
+      console.log('Fetched loans:', loansData);
+      console.log('Fetched farmers:', farmersData);
+
+      const farmersArray = Array.isArray(farmersData) ? farmersData : farmersData.farmers;
+      const allLoans = Array.isArray(loansData) ? loansData : [];
+
+      const farmersWithLoans = farmersArray
+        .filter(farmer => farmer.role !== 'admin')
+        .map(farmer => {
+          const farmerLoans = allLoans.filter(loan => {
+            const loanUserId = loan.userId?.toString();
+            const farmerId = farmer._id?.toString();
+            console.log(`Comparing loan userId: ${loanUserId} with farmer _id: ${farmerId}`);
+            return loanUserId === farmerId;
+          });
+
+          console.log(`Farmer ${farmer.name} (${farmer._id}) has ${farmerLoans.length} loans`);
+          
+          return {
+            ...farmer,
+            loans: farmerLoans
+          };
+        });
+
+      setFarmers(farmersWithLoans);
+      setLoans(allLoans);
     } catch (error) {
-      console.error("Error fetching farmers:", error);
+      console.error("Error fetching data:", error);
+      setFarmers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApproveLoan = async (farmerId: string, loanId: string) => {
-    try {
-      await fetch(`/api/admin/loans/${loanId}/approve`, {
-        method: "POST",
-      });
-      fetchFarmers(); // Refresh the list
-    } catch (error) {
-      console.error("Error approving loan:", error);
-    }
-  };
 
-  const handleRejectLoan = async (farmerId: string, loanId: string) => {
-    try {
-      await fetch(`/api/admin/loans/${loanId}/reject`, {
-        method: "POST",
-      });
-      fetchFarmers(); // Refresh the list
-    } catch (error) {
-      console.error("Error rejecting loan:", error);
-    }
-  };
+
+  
 
   const handleDeleteFarmer = async (farmerId: string) => {
     if (window.confirm("Are you sure you want to delete this farmer?")) {
@@ -225,6 +243,24 @@ const AdminDashboard: FC = () => {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
+                <p className="text-sm text-gray-500">Total Loans</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {loans.length}
+                </p>
+                <p className="text-xs text-blue-600">
+                  <TrendingUp className="h-3 w-3 inline mr-1" />
+                  Active applications
+                </p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl">
+                <IndianRupee className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
                 <p className="text-sm text-gray-500">Pending Applications</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {pendingLoans}
@@ -284,10 +320,9 @@ const AdminDashboard: FC = () => {
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-600">
+                  <Users className="h-4 w-4 text-gray-500">
                     Total: {farmers.length}
-                  </span>
+                  </Users>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg">
                   <Eye className="h-4 w-4 text-blue-500" />
@@ -332,35 +367,45 @@ const AdminDashboard: FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="space-y-2">
-                      {farmer.loans?.map((loan) => (
-                        <div
-                          key={loan.id}
-                          onClick={() => setSelectedLoan(loan)}
-                          className="flex items-center justify-between p-2 rounded-lg bg-gray-50 
-                            hover:bg-gray-100 cursor-pointer transition-all group"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <span className="text-sm font-medium whitespace-nowrap">
-                              ₹{loan.amount.toLocaleString()}
-                            </span>
-                            <Badge
-                              className={`
-                                px-2.5 py-0.5 rounded-full text-xs font-medium
-                                ${loan.status === 'approved' ? 'bg-green-100 text-green-800' : ''}
-                                ${loan.status === 'rejected' ? 'bg-red-100 text-red-800' : ''}
-                                ${loan.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                              `}
-                            >
-                              {loan.status.charAt(0).toUpperCase() +
-                                loan.status.slice(1)}
-                            </Badge>
-                          </div>
-                          <span className="text-xs text-gray-500 group-hover:text-gray-700">
-                            {new Date(loan.applicationDate).toLocaleDateString()}
+                      {/* Display total loans count with a badge */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="px-2.5 py-0.5">
+                          <IndianRupee className="h-3 w-3 mr-1" />
+                          <span className="text-sm font-medium text-gray-700">
+                            {farmer.loans?.length || 0} Loans
                           </span>
-                        </div>
-                      ))}
-                      {!farmer.loans?.length && (
+                        </Badge>
+                      </div>
+                      {/* Display loan details */}
+                      {farmer.loans && farmer.loans.length > 0 ? (
+                        farmer.loans.map((loan) => (
+                          <div
+                            key={loan._id}
+                            onClick={() => setSelectedLoan(loan)}
+                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 
+                              hover:bg-gray-100 cursor-pointer transition-all group"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="text-sm font-medium whitespace-nowrap text-gray-700">
+                                ₹{loan.amount.toLocaleString()}
+                              </span>
+                              <Badge
+                                className={`
+                                  px-2.5 py-0.5 rounded-full text-xs font-medium
+                                  ${loan.status === 'approved' ? 'bg-green-100 text-green-800' : ''}
+                                  ${loan.status === 'rejected' ? 'bg-red-100 text-red-800' : ''}
+                                  ${loan.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                `}
+                              >
+                                {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-gray-500 group-hover:text-gray-700">
+                              {new Date(loan.applicationDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
                         <span className="text-sm text-gray-500">No loans</span>
                       )}
                     </div>

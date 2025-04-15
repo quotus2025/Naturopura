@@ -32,12 +32,50 @@ export async function GET() {
     await connectDB();
 
     const loans = await Loan.find()
-      .populate('farmerId', 'name email farmName')
-      .sort({ applicationDate: -1 });
+      .populate({
+        path: 'farmerId', // Changed from userId to farmerId
+        model: 'Farmer',
+        select: 'name email farmName _id'
+      })
+      .lean();
 
-    return NextResponse.json(loans);
+    console.log('Raw loan data:', JSON.stringify(loans[0], null, 2));
+
+    const transformedLoans = loans.map(loan => {
+      // Use farmerId instead of userId
+      const userId = loan.farmerId && typeof loan.farmerId === 'object' 
+        ? loan.farmerId._id.toString() 
+        : typeof loan.farmerId === 'string' 
+          ? loan.farmerId 
+          : '';
+
+      console.log('Loan transformation:', {
+        originalFarmerId: loan.farmerId,
+        extractedUserId: userId,
+        isObject: typeof loan.farmerId === 'object',
+        hasId: loan.farmerId?._id !== undefined
+      });
+
+      return {
+        _id: loan._id.toString(),
+        userId: userId, // Keep as userId for frontend compatibility
+        amount: loan.amount,
+        status: loan.status,
+        applicationDate: loan.applicationDate,
+        farmer: loan.farmerId && typeof loan.farmerId === 'object' ? {
+          name: loan.farmerId.name,
+          email: loan.farmerId.email,
+          farmName: loan.farmerId.farmName
+        } : null
+      };
+    });
+
+    return NextResponse.json(transformedLoans);
   } catch (error) {
-    console.error('Error fetching loans:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

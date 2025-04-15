@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import FarmerProfileSidebar from '../FarmerProfileSidebar';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const DashboardContent: FC<DashboardLayoutProps> = ({ children }) => {
+const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -52,16 +52,7 @@ const DashboardContent: FC<DashboardLayoutProps> = ({ children }) => {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
       />
-     
     </div>
-  );
-};
-
-const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
-  return (
-    <AuthProvider>
-      <DashboardContent>{children}</DashboardContent>
-    </AuthProvider>
   );
 };
 
