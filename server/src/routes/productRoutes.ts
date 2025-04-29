@@ -1,40 +1,24 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { handleProductUpload } from '../middleware/upload';
 import {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  predictPrice
 } from '../controllers/productController';
 
 const router = express.Router();
 
-// Public routes
+// Price prediction route (place this BEFORE the :id routes)
+router.get('/predict-price', authenticateToken, predictPrice);
+
+// Product CRUD routes
 router.get('/', getProducts);
+router.post('/', authenticateToken, createProduct);
 router.get('/:id', getProductById);
-
-// Protected routes - with error handling
-router.post('/', 
-  (req, res, next) => {
-    console.log('Request body:', req.body);
-    next();
-  },
-  authenticateToken,
-  handleProductUpload,
-  createProduct
-);
-
-router.put('/:id',
-  authenticateToken,
-  handleProductUpload,
-  updateProduct
-);
-
-router.delete('/:id',
-  authenticateToken,
-  deleteProduct
-);
+router.put('/:id', authenticateToken, updateProduct);
+router.delete('/:id', authenticateToken, deleteProduct);
 
 export default router;

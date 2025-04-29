@@ -33,7 +33,8 @@ export const ENDPOINTS = {
 
   // Payment endpoints
   TEST_PAYMENT: '/payments/test-payment',
-  PURCHASE: '/payments/purchase'
+  PURCHASE: '/payments/purchase',
+  PREDICT_PRICE: '/products/predict-price',  // Remove the /api prefix
 };
 
 export const handleApiError = (error: unknown): string => {

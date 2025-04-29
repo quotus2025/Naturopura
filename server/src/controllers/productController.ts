@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Product from '../models/Product';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
 
 interface RequestWithFiles extends Request {
   files: Express.Multer.File[];
@@ -186,6 +187,76 @@ export const deleteProduct = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Error deleting product'
+    });
+  }
+};
+
+interface PricePredictionResponse {
+  title: string;
+  price: string;
+  source: string;
+}
+
+export const predictPrice = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+
+    // Validate query parameter
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid query parameter is required'
+      });
+    }
+
+    // Log request for debugging
+    console.log('Price prediction request:', {
+      query: q,
+      timestamp: new Date().toISOString()
+    });
+
+    const response = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'google_shopping',
+        q: q,
+        gl: 'in',
+        hl: 'en',
+        api_key: process.env.SERP_API_KEY,
+        num: 5
+      }
+    });
+
+    // Validate API response
+    if (!response.data?.shopping_results) {
+      throw new Error('Invalid response from price API');
+    }
+
+    const predictions = response.data.shopping_results
+      .filter((item: any) => item.price && typeof item.price === 'string')
+      .map((item: any) => ({
+        title: item.title || 'Unknown Product',
+        price: item.price.replace(/[^0-9,.]/g, ''),
+        source: item.source || 'Unknown Source'
+      }))
+      .slice(0, 5);
+
+    return res.status(200).json({
+      success: true,
+      predictions,
+      query: q
+    });
+
+  } catch (error: any) {
+    console.error('Price prediction error:', {
+      message: error.message,
+      query: req.query.q,
+      response: error.response?.data
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch price predictions',
+      error: error.message
     });
   }
 };
