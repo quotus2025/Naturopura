@@ -9,6 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 const MarketplacePage = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
 
+  const handlePurchase = async (productId: string) => {
+    try {
+      const apiClient = createApiClient(token);
+      await apiClient.put(`/products/${productId}/purchase`);
+      
+      // Refresh products list
+      fetchProducts();
+    } catch (error) {
+      console.error('Purchase update error:', error);
+      throw error;
+    }
+  };
+
   return (
     <FarmerLayout 
       title="Marketplace" 

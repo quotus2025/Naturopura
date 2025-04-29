@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { createApiClient, ENDPOINTS, handleApiError } from '../../config/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -8,6 +9,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import FarmerLayout from '../layouts/FarmerLayout';
+import { useToast } from '../ui/use-toast';
 
 interface FormData {
   amount: string;
@@ -50,7 +52,11 @@ const CROP_TYPES = [
 ];
 
 const LoanApplication = () => {
+  const { token, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Add state variables
   const [formData, setFormData] = useState<FormData>({
     amount: '',
     purpose: '',
@@ -60,111 +66,112 @@ const LoanApplication = () => {
     landSize: '',
     farmDetails: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Add form validation
   const validateForm = () => {
     const newErrors: FormErrors = {};
-    let isValid = true;
-
-    // Amount validation
+    
     if (!formData.amount) {
-      newErrors.amount = 'Loan amount is required';
-      isValid = false;
-    } else {
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        newErrors.amount = 'Amount must be greater than 0';
-        isValid = false;
-      }
+      newErrors.amount = 'Amount is required';
+    } else if (parseFloat(formData.amount) <= 0) {
+      newErrors.amount = 'Amount must be greater than 0';
     }
 
-    // Purpose validation
     if (!formData.purpose) {
-      newErrors.purpose = 'Please select a loan purpose';
-      isValid = false;
-    } else if (!LOAN_PURPOSES.some(p => p.value === formData.purpose)) {
-      newErrors.purpose = 'Invalid purpose value';
-      isValid = false;
+      newErrors.purpose = 'Purpose is required';
     }
 
-    // Term validation
     if (!formData.term) {
-      newErrors.term = 'Please select a loan term';
-      isValid = false;
-    } else if (!LOAN_TERMS.some(t => t.value === formData.term)) {
-      newErrors.term = 'Invalid term value';
-      isValid = false;
+      newErrors.term = 'Term is required';
     }
 
-    // Collateral validation
-    if (!formData.collateral.trim()) {
-      newErrors.collateral = 'Collateral information is required';
-      isValid = false;
+    if (!formData.collateral) {
+      newErrors.collateral = 'Collateral is required';
     }
 
-    // Crop Type validation
     if (!formData.cropType) {
-      newErrors.cropType = 'Please select a crop type';
-      isValid = false;
-    } else if (!CROP_TYPES.some(c => c.value === formData.cropType)) {
-      newErrors.cropType = 'Invalid crop type';
-      isValid = false;
-    }
-
-    // Land Size validation (optional but must be valid if provided)
-    if (formData.landSize) {
-      const landSize = parseFloat(formData.landSize);
-      if (isNaN(landSize) || landSize < 0) {
-        newErrors.landSize = 'Land size must be a positive number';
-        isValid = false;
-      }
+      newErrors.cropType = 'Crop type is required';
     }
 
     setErrors(newErrors);
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
+
+  // Add authentication check on component mount
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to access loan applications",
+        variant: "destructive",
+      });
+      navigate('/login', { state: { from: '/farmer/loans/apply' } });
+    }
+  }, [isAuthenticated, loading, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
     
     if (!validateForm()) {
       return;
     }
-    
+
+    // Early return if not authenticated
+    if (!isAuthenticated || !token) {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to submit a loan application",
+        variant: "destructive",
+      });
+      navigate('/login', { state: { from: '/farmer/loans/apply' } });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
+      // Create API client with token
       const apiClient = createApiClient(token);
       
-      const loanData = {
+      // Log for debugging
+      console.log('Submitting loan with token:', {
+        hasToken: !!token,
+        isAuthenticated
+      });
+
+      const response = await apiClient.post(ENDPOINTS.CREATE_LOAN, {
+        ...formData,
         amount: parseFloat(formData.amount),
-        purpose: formData.purpose,
-        term: formData.term,
-        collateral: formData.collateral.trim(),
-        cropType: formData.cropType,
-        landSize: formData.landSize ? parseFloat(formData.landSize) : null,
-        farmDetails: formData.farmDetails.trim() || null
-      };
+        landSize: formData.landSize ? parseFloat(formData.landSize) : undefined
+      });
 
-      await apiClient.post(ENDPOINTS.CREATE_LOAN, loanData);
-      setIsSuccess(true);
-      setTimeout(() => navigate('/farmer/loans/history'), 2000);
-    } catch (err: any) {
-      const errorMessage = handleApiError(err);
-      setErrors({ submit: errorMessage });
-
-      // If token is invalid, redirect to login
-      if (err.response?.status === 401) {
-        setTimeout(() => navigate('/login'), 2000);
+      if (response.data.success) {
+        setIsSuccess(true);
+        toast({
+          title: "Success",
+          description: "Loan application submitted successfully",
+        });
+        setTimeout(() => navigate('/farmer/loans/history'), 2000);
       }
+    } catch (error: any) {
+      // Handle authentication errors
+      if (error.response?.status === 401) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please login again.",
+          variant: "destructive",
+        });
+        navigate('/login', { state: { from: '/farmer/loans/apply' } });
+        return;
+      }
+
+      setErrors({
+        submit: handleApiError(error)
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -177,6 +184,17 @@ const LoanApplication = () => {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <FarmerLayout title="Loan Application" subtitle="Apply for a new loan">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        </div>
+      </FarmerLayout>
+    );
+  }
 
   return (
     <FarmerLayout title="Loan Application" subtitle="Apply for a new loan">

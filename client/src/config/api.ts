@@ -32,7 +32,8 @@ export const ENDPOINTS = {
   GET_EKYC_STATUS: '/ekyc/status',
 
   // Payment endpoints
-  TEST_PAYMENT: '/payments/test-payment'
+  TEST_PAYMENT: '/payments/test-payment',
+  PURCHASE: '/payments/purchase'
 };
 
 export const handleApiError = (error: unknown): string => {
@@ -65,24 +66,41 @@ export const handleApiError = (error: unknown): string => {
 };
 
 export const createApiClient = (token?: string) => {
-  console.log('Creating API client with token:', token); // Debug log
-
   const client = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
+    baseURL: API_BASE_URL,
     headers: {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` })
     }
   });
 
-  client.interceptors.request.use(request => {
-    console.log('Outgoing request:', {
-      url: request.url,
-      method: request.method,
-      headers: request.headers
-    });
-    return request;
-  });
+  // Add request interceptor for debugging
+  client.interceptors.request.use(
+    (config) => {
+      console.log('API Request:', {
+        url: config.url,
+        method: config.method,
+        headers: config.headers
+      });
+      return config;
+    },
+    (error) => {
+      console.error('Request error:', error);
+      return Promise.reject(error);
+    }
+  );
+
+  // Add response interceptor for token validation
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        // Clear invalid token
+        localStorage.removeItem('token');
+      }
+      return Promise.reject(error);
+    }
+  );
 
   return client;
 };

@@ -23,6 +23,8 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { useToast } from '../ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import TestPaymentForm from '../payment/TestPaymentForm';
 
 interface ProductProps {
   product: {
@@ -45,14 +47,17 @@ interface ProductProps {
   };
   onUpdate: (productId: string) => void;
   onDelete: (productId: string) => Promise<void>;
+  onPurchase?: (productId: string) => Promise<void>;
   currentUserId: string;
 }
 
-const ProductCard = ({ product, onUpdate, onDelete, currentUserId }: ProductProps) => {
+const ProductCard = ({ product, onUpdate, onDelete, currentUserId, onPurchase }: ProductProps) => {
   const [imageError, setImageError] = useState(false);
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [isPurchased, setIsPurchased] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -94,6 +99,70 @@ const ProductCard = ({ product, onUpdate, onDelete, currentUserId }: ProductProp
 
   const handleUpdate = () => {
     onUpdate(product._id);
+  };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      // Update purchase status
+      if (onPurchase) {
+        await onPurchase(product._id);
+      }
+      
+      setIsPurchased(true);
+      setShowPaymentDialog(false);
+      
+      toast({
+        title: "Purchase Successful",
+        description: `You have successfully purchased ${product.name}`,
+      });
+    } catch (error) {
+      console.error('Purchase update error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update purchase status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Modify the buy button render
+  const renderBuyButton = () => {
+    if (isPurchased) {
+      return (
+        <Button 
+          size="sm" 
+          className="bg-gray-500 cursor-not-allowed"
+          disabled
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Purchased
+        </Button>
+      );
+    }
+
+    if (product.quantity <= 0) {
+      return (
+        <Button 
+          size="sm" 
+          className="bg-gray-500"
+          disabled
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Out of Stock
+        </Button>
+      );
+    }
+
+    return (
+      <Button 
+        size="sm" 
+        className="bg-green-500 hover:bg-green-600 text-white transition-colors"
+        onClick={() => setShowPaymentDialog(true)}
+      >
+        <ShoppingCart className="h-4 w-4 mr-2" />
+        Buy Now
+      </Button>
+    );
   };
 
   return (
@@ -181,13 +250,7 @@ const ProductCard = ({ product, onUpdate, onDelete, currentUserId }: ProductProp
               per {product.unit}
             </span>
           </div>
-          <Button 
-            size="sm" 
-            className="bg-green-500 hover:bg-green-600 text-white transition-colors"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Add to Cart
-          </Button>
+          {renderBuyButton()}
         </div>
         {product.quantity <= 5 && product.quantity > 0 && (
           <div className="text-sm text-orange-500 mt-2">
@@ -217,6 +280,26 @@ const ProductCard = ({ product, onUpdate, onDelete, currentUserId }: ProductProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Purchase {product.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>Price:</span>
+              <span className="font-bold">₹{product.price}</span>
+            </div>
+            <TestPaymentForm 
+              amount={product.price}
+              productId={product._id}
+              onSuccess={handlePaymentSuccess}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
