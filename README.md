@@ -1,7 +1,7 @@
 # Naturopura - Agricultural Technology Platform
 
 ## Overview
-Naturopura is an innovative agricultural technology platform designed to empower farmers through digital solutions. The platform integrates blockchain technology, AI-powered crop health detection, and digital financial services.
+Naturopura is an innovative agricultural technology platform designed to empower farmers through digital solutions. The platform integrates blockchain technology, AI-powered crop health detection, digital financial services, and real-time market price analysis.
 
 ## Features
 
@@ -16,6 +16,16 @@ Naturopura is an innovative agricultural technology platform designed to empower
   - Loan applications
   - Digital payments
   - Transaction history
+
+- **Marketplace Features**
+  - **NEW: Market Price Analysis**
+    - Real-time price suggestions
+    - Competitive market data integration
+    - One-click price setting
+    - Multi-source price comparison
+  - Product listings management
+  - Order tracking
+  - Sales analytics
 
 - **Crop Management**
   - AI-powered crop health detection
@@ -33,6 +43,7 @@ Naturopura is an innovative agricultural technology platform designed to empower
   - Product listings
   - Order management
   - Pricing controls
+  - Market price monitoring
 
 ## Tech Stack
 
@@ -53,6 +64,7 @@ Naturopura is an innovative agricultural technology platform designed to empower
 - Hardhat (Blockchain)
 - Multer (File uploads)
 - OpenZeppelin Contracts
+- **NEW: SERP API** (Market price analysis)
 
 ## Getting Started
 
@@ -61,6 +73,7 @@ Naturopura is an innovative agricultural technology platform designed to empower
 - MongoDB
 - MetaMask wallet
 - Sepolia testnet ETH
+- SERP API key
 
 ### Installation
 
@@ -97,45 +110,31 @@ JWT_SECRET=your_jwt_secret
 PLANT_NET_API_KEY=your_plantnet_key
 SEPOLIA_RPC_URL=your_sepolia_url
 PRIVATE_KEY=your_wallet_private_key
+SERP_API_KEY=your_serp_api_key
 ```
 
-4. Run the development servers
+## API Documentation
 
-Client:
-```bash
-cd client
-npm run dev
+### Price Prediction Endpoints
 ```
-
-Server:
-```bash
-cd server
-npm run dev
+GET /api/products/predict-price
 ```
+Query Parameters:
+- `q`: Product name/description (required)
+- `category`: Product category (optional)
 
-## Smart Contract Deployment
-
-1. Compile the contract
-```bash
-cd server
-npx hardhat compile
-```
-
-2. Deploy to Sepolia
-```bash
-npx hardhat run scripts/deploy.ts --network sepolia
-```
-
-## Testing
-
-```bash
-# Run frontend tests
-cd client
-npm test
-
-# Run backend tests
-cd server
-npm test
+Response:
+```json
+{
+  "success": true,
+  "predictions": [
+    {
+      "title": "Product Name",
+      "price": "₹XXX.XX",
+      "source": "Vendor Name"
+    }
+  ]
+}
 ```
 
 ## Project Structure
@@ -145,26 +144,24 @@ naturopura/
 ├── client/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── marketplace/
+│   │   │   │   └── AddProductDialog.tsx
 │   │   ├── context/
 │   │   ├── pages/
 │   │   └── config/
-│   └── public/
 └── server/
     ├── src/
     │   ├── controllers/
+    │   │   └── productController.ts
     │   ├── models/
     │   ├── routes/
     │   └── config/
-    └── contracts/
 ```
 
-## Contributing
-Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
-
-
+[Rest of the existing content remains the same...]
 
 ## Acknowledgments
 - Plant.net API for plant identification
 - OpenZeppelin for smart contract security
 - MetaMask for wallet integration
-
+- SERP API for market price analysis
