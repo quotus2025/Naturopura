@@ -71,29 +71,47 @@ const AdminLoanList = () => {
       if (!token) throw new Error('No authentication token found');
 
       const apiClient = createApiClient(token);
-      await apiClient.put(`${ENDPOINTS.UPDATE_LOAN_STATUS}/${loanId}`, {
+      
+      // Log the request details
+      console.log('Updating loan status:', {
+        loanId,
+        newStatus,
+        endpoint: ENDPOINTS.UPDATE_LOAN_STATUS(loanId)
+      });
+
+      const response = await apiClient.put(ENDPOINTS.UPDATE_LOAN_STATUS(loanId), {
         status: newStatus,
         rejectionReason: newStatus === 'rejected' ? rejectionReason : undefined
       });
 
-      // Update local state
-      setLoans(loans.map(loan => 
-        loan._id === loanId 
-          ? { ...loan, status: newStatus, rejectionReason: newStatus === 'rejected' ? rejectionReason : undefined }
-          : loan
-      ));
+      if (response.data.success) {
+        // Update local state
+        setLoans(loans.map(loan => 
+          loan._id === loanId 
+            ? { ...loan, status: newStatus, rejectionReason: newStatus === 'rejected' ? rejectionReason : undefined }
+            : loan
+        ));
 
-      toast({
-        title: "Success",
-        description: `Loan ${newStatus} successfully`,
-      });
+        toast({
+          title: "Success",
+          description: `Loan ${newStatus} successfully`,
+        });
 
-      // Reset state
-      setIsDialogOpen(false);
-      setSelectedLoan(null);
-      setRejectionReason('');
+        // Reset state
+        setIsDialogOpen(false);
+        setSelectedLoan(null);
+        setRejectionReason('');
+      } else {
+        throw new Error('Failed to update loan status');
+      }
     } catch (err: any) {
-      console.error('Error updating loan status:', err);
+      console.error('Error updating loan status:', {
+        error: err,
+        loanId,
+        status: newStatus,
+        response: err.response?.data
+      });
+      
       toast({
         title: "Error",
         description: err.response?.data?.message || 'Failed to update loan status',

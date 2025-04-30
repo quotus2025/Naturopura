@@ -26,6 +26,7 @@ import AdminLoans from './pages/admin/AdminLoans';
 import EkycForm from './components/ekyc/EkycForm';
 import EkycStatusCard from './components/farmer/EkycStatusCard';
 import FarmerPayments from './components/farmer/FarmerPayments';
+import FarmerList from './components/admin/FarmerList';
 
 // Placeholder components for new routes
 const FinancialServices = () => <div>Financial Services</div>;
@@ -101,6 +102,14 @@ function App() {
                   element={
                     <PrivateRoute allowedRoles={["admin"]}>
                       <AdminLoans />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/farmers"
+                  element={
+                    <PrivateRoute allowedRoles={["admin"]}>
+                      <FarmerList />
                     </PrivateRoute>
                   }
                 />

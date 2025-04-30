@@ -14,6 +14,7 @@ import paymentRoutes from './routes/paymentRoutes';
 import createDefaultAdmin from './config/createDefaultAdmin';
 import dashboardRoutes from './routes/dashboardRoutes';
 import ekycRoutes from './routes/ekycRoutes';
+import subsidyRoutes from './routes/subsidyRoutes'; // Import subsidy routes
 
 dotenv.config();
 
@@ -150,6 +151,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/admin/dashboard', dashboardRoutes); // Add this line
 app.use('/api/ekyc', ekycRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/subsidy', subsidyRoutes); // Add this line
 
 const PORT = process.env.PORT || 5000;
 

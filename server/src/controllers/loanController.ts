@@ -3,11 +3,14 @@ import { validationResult } from 'express-validator';
 import Loan from '../models/Loan';
 import User from '../models/User';
 
-// Use the JwtPayload interface from auth middleware
+// Update AuthRequest interface to match auth middleware user structure
 interface AuthRequest extends Request {
   user?: {
-    userId: string;
+    id: string;         // Changed from userId to id
     role: string;
+    email: string;
+    name?: string;
+    kyc?: any;
   };
 }
 
@@ -45,7 +48,7 @@ export const createLoan = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    if (!req.user?.userId) {
+    if (!req.user?.id) {  // Changed from userId to id
       res.status(401).json({ 
         success: false, 
         message: 'User not authenticated' 
@@ -55,11 +58,11 @@ export const createLoan = async (req: AuthRequest, res: Response): Promise<void>
 
     console.log('Creating loan with data:', { 
       amount, purpose, term, collateral, cropType, landSize, farmDetails,
-      farmer: req.user.userId 
+      farmer: req.user.id  // Changed from userId to id
     });
 
     const loan = new Loan({
-      farmer: req.user.userId,
+      farmer: req.user.id,  // Changed from userId to id
       amount,
       purpose,
       term,
@@ -114,7 +117,7 @@ export const getAllLoans = async (_req: AuthRequest, res: Response): Promise<voi
 // @access  Private (Farmer only)
 export const getFarmerLoans = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const loans = await Loan.find({ farmer: req.user?.userId }).sort({ appliedDate: -1 });
+    const loans = await Loan.find({ farmer: req.user?.id }).sort({ appliedDate: -1 }); // Changed from userId to id
 
     res.status(200).json({
       success: true,
@@ -142,7 +145,7 @@ export const getLoanById = async (req: AuthRequest, res: Response): Promise<void
 
     // Check access rights
     const isOwner = loan.farmer && typeof loan.farmer === 'object'
-      ? loan.farmer._id.toString() === req.user?.userId
+      ? loan.farmer._id.toString() === req.user?.id  // Changed from userId to id
       : false;
 
     if (req.user?.role !== 'admin' && !isOwner) {

@@ -94,3 +94,19 @@ export const validateToken = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getFarmers = async (req: Request, res: Response) => {
+  try {
+    const farmers = await User.find({ role: 'farmer' })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.json(farmers);
+  } catch (error) {
+    console.error('Error fetching farmers:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching farmers' 
+    });
+  }
+};

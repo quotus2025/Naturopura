@@ -15,7 +15,7 @@ export const ENDPOINTS = {
   CREATE_PRODUCT: '/products',
   UPDATE_PRODUCT: (id: string) => `/products/${id}`,
   DELETE_PRODUCT: (id: string) => `/products/${id}`,
-  
+
   // Loan endpoints
   CREATE_LOAN: '/loans',
   GET_FARMER_LOANS: '/loans/farmer',
@@ -24,8 +24,15 @@ export const ENDPOINTS = {
   UPDATE_LOAN_STATUS: (id: string) => `/loans/${id}/status`,
   GET_LOAN_STATS: '/loans/stats',
 
+  // Subsidy endpoints
+  CREATE_SUBSIDY: '/subsidy/apply',
+  GET_MY_SUBSIDIES: '/subsidy/my',
+  GET_ALL_SUBSIDIES: '/subsidy/all',
+  UPDATE_SUBSIDY_STATUS: (id: string) => `/subsidy/${id}/status`,
+
   // Dashboard endpoints
   GET_DASHBOARD_STATS: '/admin/dashboard/stats',
+  GET_FARMERS: '/users/farmers',
 
   // eKYC endpoints
   VERIFY_EKYC: '/ekyc/verify',
@@ -34,54 +41,49 @@ export const ENDPOINTS = {
   // Payment endpoints
   TEST_PAYMENT: '/payments/test-payment',
   PURCHASE: '/payments/purchase',
-  PREDICT_PRICE: '/products/predict-price',  // Remove the /api prefix
+  PREDICT_PRICE: '/products/predict-price', // Remove the /api prefix
 };
 
+// Global API error handler
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
-    // Handle Axios error responses
     const axiosError = error as AxiosError<{ message?: string }>;
-    
+
     if (axiosError.response) {
-      // Server responded with error status
-      const message = axiosError.response.data?.message || axiosError.message;
-      return message;
+      return axiosError.response.data?.message || axiosError.message;
     }
-    
+
     if (axiosError.request) {
-      // Request made but no response
       return 'Network error. Please check your connection.';
     }
-    
-    // Other axios errors
+
     return axiosError.message;
   }
 
-  // Handle non-axios errors
   if (error instanceof Error) {
     return error.message;
   }
 
-  // Unknown error type
   return 'An unexpected error occurred';
 };
 
-export const createApiClient = (token?: string) => {
+// Authenticated Axios client creator
+export const createApiClient = (token?: string): AxiosInstance => {
   const client = axios.create({
     baseURL: API_BASE_URL,
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` })
-    }
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
   });
 
-  // Add request interceptor for debugging
+  // Request interceptor (debugging/logging)
   client.interceptors.request.use(
     (config) => {
       console.log('API Request:', {
         url: config.url,
         method: config.method,
-        headers: config.headers
+        headers: config.headers,
       });
       return config;
     },
@@ -91,13 +93,12 @@ export const createApiClient = (token?: string) => {
     }
   );
 
-  // Add response interceptor for token validation
+  // Response interceptor (token validation)
   client.interceptors.response.use(
     (response) => response,
     (error) => {
       if (error.response?.status === 401) {
-        // Clear invalid token
-        localStorage.removeItem('token');
+        localStorage.removeItem('token'); // clear invalid token
       }
       return Promise.reject(error);
     }
